@@ -6,7 +6,6 @@
 
 sort_timer_heap::sort_timer_heap()
 {
-	printf("%s\n", "create timer_heap begin");
     capacity = 1000;
 	curSize = 0;
 	array = new util_timer* [capacity];
@@ -19,7 +18,6 @@ sort_timer_heap::sort_timer_heap()
 	{
 		array[i] = NULL;
 	}
-	printf("%s\n", "create timer_heap end");
 }
 
 sort_timer_heap::~sort_timer_heap()

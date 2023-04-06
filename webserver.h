@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <cassert>
 #include <sys/epoll.h>
-
+#include "./log/log.h"
 #include "./threadpool/threadpool.h"
 #include "./http/http_conn.h"
 
@@ -22,7 +22,9 @@ const int TIMESLOT = 5;             //最小超时单位
 class WebServer
 {
 public:
-    WebServer();
+    WebServer(int port , string user, string passWord, string databaseName,
+              int log_write , int opt_linger, int trigmode, int sql_num,
+              int thread_num, int close_log, int actor_model);
     ~WebServer();
 
     void init(int port , string user, string passWord, string databaseName,

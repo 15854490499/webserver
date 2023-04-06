@@ -1,0 +1,136 @@
+2023-04-06 14:56:54.063736 [info]: ==========================threadpool init===========================
+2023-04-06 14:56:54.063931 [info]: ==========================threadpool end init=======================
+2023-04-06 14:56:54.063988 [info]: =========================webserver listening========================
+2023-04-06 14:56:54.064021 [info]: =========================webserver end listen======================
+2023-04-06 14:56:54.064029 [info]: ===================================webserver eventloop======================
+2023-04-06 14:56:54.064059 [info]: running Fiber assertion
+2023-04-06 14:56:54.064163 [info]: Fiber State assertion
+2023-04-06 14:56:54.064174 [info]: running Fiber assertion
+2023-04-06 14:56:54.064202 [info]: running Fiber assertion
+2023-04-06 14:56:54.064220 [info]: Fiber State assertion
+2023-04-06 14:56:54.064227 [info]: running Fiber assertion
+2023-04-06 14:56:54.064245 [info]: running Fiber assertion
+2023-04-06 14:56:54.064262 [info]: Fiber State assertion
+2023-04-06 14:56:54.064270 [info]: running Fiber assertion
+2023-04-06 14:56:54.064291 [info]: running Fiber assertion
+2023-04-06 14:56:54.064309 [info]: Fiber State assertion
+2023-04-06 14:56:54.064317 [info]: running Fiber assertion
+2023-04-06 14:56:54.064335 [info]: running Fiber assertion
+2023-04-06 14:56:54.064352 [info]: Fiber State assertion
+2023-04-06 14:56:54.064359 [info]: running Fiber assertion
+2023-04-06 14:56:54.064381 [info]: running Fiber assertion
+2023-04-06 14:56:54.064398 [info]: Fiber State assertion
+2023-04-06 14:56:54.064405 [info]: running Fiber assertion
+2023-04-06 14:56:54.064423 [info]: running Fiber assertion
+2023-04-06 14:56:54.064440 [info]: Fiber State assertion
+2023-04-06 14:56:54.064447 [info]: running Fiber assertion
+2023-04-06 14:56:54.064469 [info]: running Fiber assertion
+2023-04-06 14:56:54.064485 [info]: Fiber State assertion
+2023-04-06 14:56:54.064493 [info]: running Fiber assertion
+2023-04-06 14:57:00.952599 [info]: deal with the client(127.0.0.1)
+2023-04-06 14:57:00.952633 [info]: adjust timer once
+2023-04-06 14:57:00.952649 [info]: Fiber State assertion
+2023-04-06 14:57:00.952660 [info]: GET / HTTP/1.1
+2023-04-06 14:57:00.952669 [info]: Host: 127.0.0.1:9006
+2023-04-06 14:57:00.952675 [info]: Connection: keep-alive
+2023-04-06 14:57:00.952682 [info]: sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
+2023-04-06 14:57:00.952848 [info]: oop!unknow header: sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
+2023-04-06 14:57:00.952874 [info]: sec-ch-ua-mobile: ?0
+2023-04-06 14:57:00.952880 [info]: oop!unknow header: sec-ch-ua-mobile: ?0
+2023-04-06 14:57:00.952887 [info]: sec-ch-ua-platform: "Linux"
+2023-04-06 14:57:00.952893 [info]: oop!unknow header: sec-ch-ua-platform: "Linux"
+2023-04-06 14:57:00.952899 [info]: Upgrade-Insecure-Requests: 1
+2023-04-06 14:57:00.952905 [info]: oop!unknow header: Upgrade-Insecure-Requests: 1
+2023-04-06 14:57:00.952911 [info]: User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+2023-04-06 14:57:00.952917 [info]: oop!unknow header: User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+2023-04-06 14:57:00.952923 [info]: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+2023-04-06 14:57:00.952929 [info]: oop!unknow header: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+2023-04-06 14:57:00.952935 [info]: Purpose: prefetch
+2023-04-06 14:57:00.952941 [info]: oop!unknow header: Purpose: prefetch
+2023-04-06 14:57:00.952948 [info]: Sec-Fetch-Site: none
+2023-04-06 14:57:00.952953 [info]: oop!unknow header: Sec-Fetch-Site: none
+2023-04-06 14:57:00.952959 [info]: Sec-Fetch-Mode: navigate
+2023-04-06 14:57:00.952965 [info]: oop!unknow header: Sec-Fetch-Mode: navigate
+2023-04-06 14:57:00.952971 [info]: Sec-Fetch-User: ?1
+2023-04-06 14:57:00.952977 [info]: oop!unknow header: Sec-Fetch-User: ?1
+2023-04-06 14:57:00.952991 [info]: Sec-Fetch-Dest: document
+2023-04-06 14:57:00.952998 [info]: oop!unknow header: Sec-Fetch-Dest: document
+2023-04-06 14:57:00.953004 [info]: Accept-Encoding: gzip, deflate, br
+2023-04-06 14:57:00.953010 [info]: oop!unknow header: Accept-Encoding: gzip, deflate, br
+2023-04-06 14:57:00.953016 [info]: Accept-Language: zh-CN,zh;q=0.9
+2023-04-06 14:57:00.953022 [info]: oop!unknow header: Accept-Language: zh-CN,zh;q=0.9
+2023-04-06 14:57:00.953028 [info]: 
+2023-04-06 14:57:00.953057 [info]: request:HTTP/1.1 200 OK
+
+2023-04-06 14:57:00.953071 [info]: request:HTTP/1.1 200 OK
+Content-Length:540
+
+2023-04-06 14:57:00.953078 [info]: request:HTTP/1.1 200 OK
+Content-Length:540
+Connection:keep-alive
+
+2023-04-06 14:57:00.953085 [info]: request:HTTP/1.1 200 OK
+Content-Length:540
+Connection:keep-alive
+
+
+2023-04-06 14:57:00.953269 [info]: send data to the client(127.0.0.1)
+2023-04-06 14:57:00.953282 [info]: adjust timer once
+2023-04-06 14:57:00.953296 [info]: Fiber State assertion
+2023-04-06 14:57:02.779694 [info]: deal with the client(127.0.0.1)
+2023-04-06 14:57:02.779751 [info]: adjust timer once
+2023-04-06 14:57:02.779766 [info]: Fiber State assertion
+2023-04-06 14:57:02.779778 [info]: POST /1 HTTP/1.1
+2023-04-06 14:57:02.779786 [info]: Host: 127.0.0.1:9006
+2023-04-06 14:57:02.779792 [info]: Connection: keep-alive
+2023-04-06 14:57:02.779798 [info]: Content-Length: 0
+2023-04-06 14:57:02.779805 [info]: Cache-Control: max-age=0
+2023-04-06 14:57:02.779811 [info]: oop!unknow header: Cache-Control: max-age=0
+2023-04-06 14:57:02.779817 [info]: sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
+2023-04-06 14:57:02.779823 [info]: oop!unknow header: sec-ch-ua: "Chromium";v="106", "Google Chrome";v="106", "Not;A=Brand";v="99"
+2023-04-06 14:57:02.779829 [info]: sec-ch-ua-mobile: ?0
+2023-04-06 14:57:02.779836 [info]: oop!unknow header: sec-ch-ua-mobile: ?0
+2023-04-06 14:57:02.779842 [info]: sec-ch-ua-platform: "Linux"
+2023-04-06 14:57:02.779848 [info]: oop!unknow header: sec-ch-ua-platform: "Linux"
+2023-04-06 14:57:02.779854 [info]: Upgrade-Insecure-Requests: 1
+2023-04-06 14:57:02.779860 [info]: oop!unknow header: Upgrade-Insecure-Requests: 1
+2023-04-06 14:57:02.779865 [info]: Origin: http://127.0.0.1:9006
+2023-04-06 14:57:02.779871 [info]: oop!unknow header: Origin: http://127.0.0.1:9006
+2023-04-06 14:57:02.779877 [info]: Content-Type: application/x-www-form-urlencoded
+2023-04-06 14:57:02.780043 [info]: oop!unknow header: Content-Type: application/x-www-form-urlencoded
+2023-04-06 14:57:02.780050 [info]: User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+2023-04-06 14:57:02.780070 [info]: oop!unknow header: User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+2023-04-06 14:57:02.780076 [info]: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+2023-04-06 14:57:02.780082 [info]: oop!unknow header: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+2023-04-06 14:57:02.780089 [info]: Sec-Fetch-Site: same-origin
+2023-04-06 14:57:02.780110 [info]: oop!unknow header: Sec-Fetch-Site: same-origin
+2023-04-06 14:57:02.780134 [info]: Sec-Fetch-Mode: navigate
+2023-04-06 14:57:02.780141 [info]: oop!unknow header: Sec-Fetch-Mode: navigate
+2023-04-06 14:57:02.780147 [info]: Sec-Fetch-User: ?1
+2023-04-06 14:57:02.780153 [info]: oop!unknow header: Sec-Fetch-User: ?1
+2023-04-06 14:57:02.780159 [info]: Sec-Fetch-Dest: document
+2023-04-06 14:57:02.780166 [info]: oop!unknow header: Sec-Fetch-Dest: document
+2023-04-06 14:57:02.780185 [info]: Referer: http://127.0.0.1:9006/
+2023-04-06 14:57:02.780209 [info]: oop!unknow header: Referer: http://127.0.0.1:9006/
+2023-04-06 14:57:02.780215 [info]: Accept-Encoding: gzip, deflate, br
+2023-04-06 14:57:02.780234 [info]: oop!unknow header: Accept-Encoding: gzip, deflate, br
+2023-04-06 14:57:02.780267 [info]: Accept-Language: zh-CN,zh;q=0.9
+2023-04-06 14:57:02.780287 [info]: oop!unknow header: Accept-Language: zh-CN,zh;q=0.9
+2023-04-06 14:57:02.780293 [info]: 
+2023-04-06 14:57:02.780366 [info]: request:HTTP/1.1 200 OK
+
+2023-04-06 14:57:02.780373 [info]: request:HTTP/1.1 200 OK
+Content-Length:724
+
+2023-04-06 14:57:02.780380 [info]: request:HTTP/1.1 200 OK
+Content-Length:724
+Connection:keep-alive
+
+2023-04-06 14:57:02.780399 [info]: request:HTTP/1.1 200 OK
+Content-Length:724
+Connection:keep-alive
+
+
+2023-04-06 14:57:02.780506 [info]: send data to the client(127.0.0.1)
+2023-04-06 14:57:02.780534 [info]: adjust timer once
+2023-04-06 14:57:02.780560 [info]: Fiber State assertion

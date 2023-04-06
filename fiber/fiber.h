@@ -44,6 +44,7 @@ private:
     void* m_stack = nullptr;
     /// 协程运行函数
 	std::function<void()> m_cb;
+	int m_close_log;
 };
 
 #endif

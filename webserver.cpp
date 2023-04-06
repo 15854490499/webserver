@@ -1,8 +1,10 @@
 #include "webserver.h"
-WebServer::WebServer()
+WebServer::WebServer(int port, string user, string passWord, string databaseName, int log_write, 
+                     int opt_linger, int trigmode, int sql_num, int thread_num, int close_log, int actor_model)
 {
+	init(port, user, passWord, databaseName, log_write, opt_linger, trigmode, sql_num, thread_num, close_log, actor_model);
+	this->log_write();
     //http_conn类对象
-	cout << "======================webserver constructor!=======================" << endl;
     users = new http_conn[MAX_FD];
 
     //root文件夹路径
@@ -16,12 +18,11 @@ WebServer::WebServer()
 
     //定时器
     users_timer = new client_data[MAX_FD];
-	cout << "======================webserver end creatd!=======================" << endl;
 }
 
 WebServer::~WebServer()
 {
-	cout << "=================webserver destructor=============================" << endl;
+	LOG_INFO("=================webserver destructor==============================");
     close(m_epollfd);
     close(m_listenfd);
     close(m_pipefd[1]);
@@ -29,13 +30,12 @@ WebServer::~WebServer()
     delete[] users;
     delete[] users_timer;
     delete m_pool;
-	cout << "=================webserver end destructor=========================" << endl;
+	LOG_INFO("=================webserver end destructor==========================");
 }
 
 void WebServer::init(int port, string user, string passWord, string databaseName, int log_write, 
                      int opt_linger, int trigmode, int sql_num, int thread_num, int close_log, int actor_model)
 {
-	cout << "==========================webserver init==========================" << endl;
     m_port = port;
     m_user = user;
     m_passWord = passWord;
@@ -47,7 +47,6 @@ void WebServer::init(int port, string user, string passWord, string databaseName
     m_TRIGMode = trigmode;
     m_close_log = close_log;
     m_actormodel = actor_model;
-	cout << "=======================webserver end init=========================" << endl;
 }
 
 void WebServer::trig_mode()
@@ -102,15 +101,15 @@ void WebServer::sql_pool()
 
 void WebServer::thread_pool()
 {
-	cout << "==========================threadpool init==========================" << endl;
+	LOG_INFO("==========================threadpool init===========================");
     //线程池
     m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
-	cout << "==========================threadpool end init======================" << endl;
+	LOG_INFO("==========================threadpool end init=======================");
 }
 
 void WebServer::eventListen()
 {
-	cout << "=========================webserver listening=======================" << endl; 
+	LOG_INFO("=========================webserver listening========================"); 
     //网络编程基础步骤
     m_listenfd = socket(PF_INET, SOCK_STREAM, 0);
     assert(m_listenfd >= 0);
@@ -165,7 +164,7 @@ void WebServer::eventListen()
     //工具类,信号和描述符基础操作
     Utils::u_pipefd = m_pipefd;
     Utils::u_epollfd = m_epollfd;
-	cout << "=========================webserver end listen======================" << endl; 
+	LOG_INFO("=========================webserver end listen======================"); 
 }
 
 void WebServer::timer(int connfd, struct sockaddr_in client_address)
@@ -333,13 +332,11 @@ void WebServer::dealwithread(int sockfd)
 
             if (timer)
             {
-				//cout << "dealwithread " << sockfd << endl;
                 adjust_timer(timer);
             }
         }
         else
         {
-			cout << "dealwithread deal_timer" << endl;
             deal_timer(timer, sockfd);
         }
     }
@@ -381,22 +378,19 @@ void WebServer::dealwithwrite(int sockfd)
 
             if (timer)
             {
-				//cout << "dealwithwrite " << sockfd << endl;
                 adjust_timer(timer);
             }
         }
         else
         {
-			//cout << "dealwithwrite deal_timer" << endl;
             deal_timer(timer, sockfd);
-			//cout << "dealwithwrite deal_timer end" << endl;
         }
     }
 }
 
 void WebServer::eventLoop()
 {
-	cout << "===================================webserver eventloop======================" << endl;
+	LOG_INFO("===================================webserver eventloop======================");
     bool timeout = false;
     bool stop_server = false;
 
@@ -415,7 +409,6 @@ void WebServer::eventLoop()
             //处理新到的客户连接
             if (sockfd == m_listenfd)
             {
-				//std::cout << "新到客户连接 " << sockfd << endl;
                 bool flag = dealclinetdata();
                 if (false == flag)
                     continue;
@@ -423,15 +416,12 @@ void WebServer::eventLoop()
             else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             {
                 //服务器端关闭连接，移除对应的定时器
-				//std::cout << "服务器端关闭连接，移除对应的定时器 " << sockfd << endl;
                 util_timer *timer = users_timer[sockfd].timer;
-				//cout << "eventloop deal_timer" << endl;
                 deal_timer(timer, sockfd);
             }
             //处理信号
             else if ((sockfd == m_pipefd[0]) && (events[i].events & EPOLLIN))
             {
-			//	std::cout << "signal coming!!!" << " " << m_pipefd[0] << endl;
                 bool flag = dealwithsignal(timeout, stop_server);
                 if (false == flag)
                     LOG_ERROR("%s", "dealclientdata failure");
@@ -455,5 +445,5 @@ void WebServer::eventLoop()
             timeout = false;
         }
     }
-	cout << "===============================webserver end eventloop======================" << endl;
+	LOG_INFO("===============================webserver end eventloop======================");
 }

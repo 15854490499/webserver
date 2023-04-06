@@ -68,6 +68,10 @@ bool Log::init(const char *file_name, int close_log, int log_buf_size, int split
     return true;
 }
 
+int Log::isClose() {
+	return m_close_log;
+}
+
 void Log::write_log(int level, const char *format, ...)
 {
     struct timeval now = {0, 0};
