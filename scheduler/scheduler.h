@@ -5,26 +5,26 @@
 #include <vector>
 #include <list>
 #include <iostream>
+#include <functional>
+#include <atomic>
 #include "../fiber/fiber.h"
-#include "../lock/lock.h"
-#include "../threadpool/threadpool.h"
+#include "../log/log.h"
+#include "../lock/locker.h"
 
 class Scheduler {
 public:
 	typedef std::shared_ptr<Scheduler> ptr;
-	Scheduler(size_t threads = 1, const std::string& name = "");
+	Scheduler(size_t threads = 1);
 	virtual ~Scheduler();
-	const std::string& getName() const { return m_name;}
 	static Scheduler* GetThis();
 	static Fiber* GetMainFiber();
-	void start();
-	void stop();
-	template<class Fiber>
-	void schedule(Fiber f, int thread = -1) {
-		bool need_tictle = false;
+	template<class FiberOrCb>
+	void schedule(FiberOrCb fc, int thread = -1) {
+		bool need_tickle = false;
 		{
-			my_locker.lock();
-			need_tickle = scheduleNolock(f, thread);
+			m_locker.lock();
+			need_tickle = scheduleNoLock(fc, thread);
+			m_locker.unlock();
 		}
 		if(need_tickle)
 			tickle();
@@ -33,14 +33,14 @@ protected:
 	virtual void tickle();
 	void run();
 	virtual void idle();
-	virtual bool stopping();
 	void setThis();
+	bool hasIdleThreads() { return m_idleThreadCount > 0; }
 private:
-	template<class Fiber>
-	bool scheduleNoLock(Fiber f, int thread) {
+	template<class FiberOrCb>
+	bool scheduleNoLock(FiberOrCb fc, int thread) {
 		bool need_tickle = m_tasks.empty();
-		SchedulerTask task(f, thread);
-		if(task.fiber) {
+		SchedulerTask task(fc, thread);
+		if(task.fiber || task.cb) {
 			m_tasks.push_back(task);
 		}
 		return need_tickle;
@@ -48,6 +48,7 @@ private:
 private:
 	struct SchedulerTask {
 		Fiber::ptr fiber;
+		std::function<void()> cb;
 		int thread;
 		SchedulerTask(Fiber::ptr f, int thr) {
 			fiber = f;
@@ -55,25 +56,26 @@ private:
 		}
 		SchedulerTask(Fiber::ptr *f, int thr) {
 			fiber.swap(*f);
-			thread = f;
+			thread = thr;
 		}
-		Schedulertask() { thread = -1; }
+		SchedulerTask(std::function<void()> f, int thr) {
+			cb = f;
+			thread = thr;
+		}
+		SchedulerTask() { thread = -1; }
 		void reset() {
 			fiber = nullptr;
+			cb = nullptr;
 			thread = -1;
 		}
-	}
+	};
 private:
-	locker my_locker;
-	std::string m_name;
-	std::vector<Thread::ptr> m_threads;
+	locker m_locker;
 	std::list<SchedulerTask> m_tasks;
-	std::vector<int> m_threadIds;
 	size_t m_threadCount = 0;
 	std::atomic<size_t> m_activeThreadCount = {0};
 	std::atomic<size_t> m_idleThreadCount = {0};
-	/*bool m_useCaller;
-	Fiber::ptr m_rootFiber;*/
+	Fiber::ptr m_rootFiber;
 	int m_rootThread = 0;
-	bool m_stopping = false;
 };
+#endif

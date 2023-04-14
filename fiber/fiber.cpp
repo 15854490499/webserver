@@ -2,7 +2,6 @@
 #include "../webserver.h"
 #include <string.h>
 #include <atomic>
-#include <assert.h>
 #include <exception>
 
 

@@ -1,9 +1,6 @@
 #include "webserver.h"
-WebServer::WebServer(int port, string user, string passWord, string databaseName, int log_write, 
-                     int opt_linger, int trigmode, int sql_num, int thread_num, int close_log, int actor_model)
+WebServer::WebServer()
 {
-	init(port, user, passWord, databaseName, log_write, opt_linger, trigmode, sql_num, thread_num, close_log, actor_model);
-	this->log_write();
     //http_conn类对象
     users = new http_conn[MAX_FD];
 
@@ -22,7 +19,6 @@ WebServer::WebServer(int port, string user, string passWord, string databaseName
 
 WebServer::~WebServer()
 {
-	LOG_INFO("=================webserver destructor==============================");
     close(m_epollfd);
     close(m_listenfd);
     close(m_pipefd[1]);
@@ -30,7 +26,6 @@ WebServer::~WebServer()
     delete[] users;
     delete[] users_timer;
     delete m_pool;
-	LOG_INFO("=================webserver end destructor==========================");
 }
 
 void WebServer::init(int port, string user, string passWord, string databaseName, int log_write, 
@@ -101,15 +96,12 @@ void WebServer::sql_pool()
 
 void WebServer::thread_pool()
 {
-	LOG_INFO("==========================threadpool init===========================");
     //线程池
     m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
-	LOG_INFO("==========================threadpool end init=======================");
 }
 
 void WebServer::eventListen()
 {
-	LOG_INFO("=========================webserver listening========================"); 
     //网络编程基础步骤
     m_listenfd = socket(PF_INET, SOCK_STREAM, 0);
     assert(m_listenfd >= 0);
@@ -145,6 +137,7 @@ void WebServer::eventListen()
     //epoll创建内核事件表
     epoll_event events[MAX_EVENT_NUMBER];
     m_epollfd = epoll_create(5);
+	LOG_INFO("webserver创建%d", m_epollfd);
     assert(m_epollfd != -1);
 
     utils.addfd(m_epollfd, m_listenfd, false, m_LISTENTrigmode);
@@ -153,7 +146,7 @@ void WebServer::eventListen()
     ret = socketpair(PF_UNIX, SOCK_STREAM, 0, m_pipefd);
     assert(ret != -1);
     utils.setnonblocking(m_pipefd[1]);
-    //utils.addfd(m_epollfd, m_pipefd[0], false, 0);
+    utils.addfd(m_epollfd, m_pipefd[0], false, 0);
 
     utils.addsig(SIGPIPE, SIG_IGN);
     utils.addsig(SIGALRM, utils.sig_handler, false);
@@ -164,7 +157,6 @@ void WebServer::eventListen()
     //工具类,信号和描述符基础操作
     Utils::u_pipefd = m_pipefd;
     Utils::u_epollfd = m_epollfd;
-	LOG_INFO("=========================webserver end listen======================"); 
 }
 
 void WebServer::timer(int connfd, struct sockaddr_in client_address)
@@ -197,14 +189,9 @@ void WebServer::adjust_timer(util_timer *timer)
 
 void WebServer::deal_timer(util_timer *timer, int sockfd)
 {
-	/*if(timer != NULL)
-		std::cout << "deal_timer is not NULL" << endl;*/
-    timer->cb_func(&users_timer[sockfd]);
-	/*if(timer == NULL)
-			std::cout << "deal_timer is NULL" << endl;*/
-    if (timer)
+	timer->cb_func(&users_timer[sockfd]);
+	if (timer)
     {
-		//std::cout << "timer is not null" << endl;
         utils.m_timer_heap.del_timer(timer);
     }
 
@@ -218,6 +205,7 @@ bool WebServer::dealclinetdata()
     if (0 == m_LISTENTrigmode)
     {
         int connfd = accept(m_listenfd, (struct sockaddr *)&client_address, &client_addrlength);
+		//std::cout << "处理新到客户连接 " << connfd << endl;
         if (connfd < 0)
         {
             LOG_ERROR("%s:errno is:%d", "accept error", errno);
@@ -374,6 +362,7 @@ void WebServer::dealwithwrite(int sockfd)
         //proactor
         if (users[sockfd].write())
         {
+			//std::cout << "向" << sockfd << "发送数据成功" << endl;
             LOG_INFO("send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
 
             if (timer)
@@ -402,13 +391,14 @@ void WebServer::eventLoop()
             LOG_ERROR("%s", "epoll failure");
             break;
         }
+		
         for (int i = 0; i < number; i++)
         {
             int sockfd = events[i].data.fd;
-
             //处理新到的客户连接
             if (sockfd == m_listenfd)
             {
+				//std::cout << "webserver收到 新到客户连接" << sockfd << endl;
                 bool flag = dealclinetdata();
                 if (false == flag)
                     continue;
@@ -416,12 +406,14 @@ void WebServer::eventLoop()
             else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
             {
                 //服务器端关闭连接，移除对应的定时器
+				//std::cout << "服务器端关闭连接，移除对应的定时器" << sockfd << endl;
                 util_timer *timer = users_timer[sockfd].timer;
                 deal_timer(timer, sockfd);
             }
             //处理信号
             else if ((sockfd == m_pipefd[0]) && (events[i].events & EPOLLIN))
             {
+				//std::cout << "webserver收到 信号" << sockfd << endl;
                 bool flag = dealwithsignal(timeout, stop_server);
                 if (false == flag)
                     LOG_ERROR("%s", "dealclientdata failure");
@@ -429,10 +421,12 @@ void WebServer::eventLoop()
             //处理客户连接上接收到的数据
             else if (events[i].events & EPOLLIN)
             {
+				//std::cout << "webserver收到 读请求" << sockfd << endl;
                 dealwithread(sockfd);
             }
             else if (events[i].events & EPOLLOUT)
             {
+				//std::cout << "webserver收到 写请求" << sockfd << endl;
                 dealwithwrite(sockfd);
             }
         }

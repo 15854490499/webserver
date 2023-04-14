@@ -6,6 +6,7 @@
 #include <string>
 #include <stdarg.h>
 #include <pthread.h>
+#include <assert.h>
 #include "block_queue.h"
 
 using namespace std;

@@ -101,7 +101,7 @@ void sort_timer_heap::add_timer(util_timer *timer)
 	//cout << curSize << endl;
 	if(curSize == capacity)
 	{
-		std::cout << "Heap Full!" << endl;
+		std::cout << "timer Heap Full!" << endl;
 		resize();
 	}
 	array[curSize] = timer;
@@ -163,9 +163,7 @@ void sort_timer_heap::del_timer(util_timer *timer)
 
 void sort_timer_heap::tick(int cur)
 {
-	//std::cout << "tick begin" << endl;
 	util_timer* tmp = array[0];
-	//time_t cur = time(NULL);
 	while(curSize > 0)
 	{
 		if(!tmp)
@@ -179,7 +177,6 @@ void sort_timer_heap::tick(int cur)
 		pop_timer();
 		tmp = array[0];
 	}
-	//std::cout << "tick end" << endl;
 	return;
 }
 
@@ -266,7 +263,6 @@ int Utils::getNextTick(int t) {
 	int ret = m_TIMESLOT;
 	if(!m_timer_heap.isEmpty()) {
 		ret = m_timer_heap.top()->expire - t;
-		std::cout << ret << endl;
 		if(ret < 0)
 			ret = 0;
 	}
@@ -279,7 +275,7 @@ int Utils::u_epollfd = 0;
 class Utils;
 void cb_func(client_data* user_data)
 {
-	//std::cout << syscall(__NR_gettid) << "call back" << endl;
+	//std::cout << syscall(__NR_gettid) << "call back" << user_data->sockfd << endl;
     epoll_ctl(Utils::u_epollfd, EPOLL_CTL_DEL, user_data->sockfd, 0);
     assert(user_data);
     close(user_data->sockfd);

@@ -91,7 +91,10 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode)
     else
         event.events = ev | EPOLLONESHOT | EPOLLRDHUP;
 
-    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    if(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event)!=0)
+	{
+		LOG_ERROR("modify epoll err %d %s", errno, strerror(errno));
+	}
 }
 
 int http_conn::m_user_count = 0;
@@ -582,7 +585,7 @@ http_conn::HTTP_CODE http_conn::do_request()
 }
 void http_conn::write_to_file(char* fileName)
 {	
-	printf("the file Path:%s\n", fileName);
+	//printf("the file Path:%s\n", fileName);
 	FILE* fp;
 	if((fp = fopen(fileName, "a+")) == NULL) {
 		cout << "打开失败";
@@ -720,7 +723,7 @@ bool http_conn::process_write(HTTP_CODE ret)
     {
     case INTERNAL_ERROR:
     {
-		std::cout << "INTERNAL_ERROR" << endl;
+		//std::cout << "INTERNAL_ERROR" << endl;
         add_status_line(500, error_500_title);
         add_headers(strlen(error_500_form));
         if (!add_content(error_500_form))
@@ -738,7 +741,7 @@ bool http_conn::process_write(HTTP_CODE ret)
     }
     case FORBIDDEN_REQUEST:
     {
-		std::cout << "FORBIDDEN_REQUEST" << endl;
+		//std::cout << "FORBIDDEN_REQUEST" << endl;
         add_status_line(403, error_403_title);
         add_headers(strlen(error_403_form));
         if (!add_content(error_403_form))
@@ -785,17 +788,20 @@ bool http_conn::process_write(HTTP_CODE ret)
 void http_conn::process()
 {
 	//cout << "=================begin process()=====================" << endl;
+	//std::cout << "开始process_read" << endl;
 	http_conn::HTTP_CODE read_ret = process_read();
     if (read_ret == http_conn::NO_REQUEST)
     {
 		modfd(http_conn::m_epollfd, http_conn::m_sockfd, EPOLLIN, http_conn::m_TRIGMode);
         return;
     }
+	//std::cout << "开始process_wirte" << endl;
     bool write_ret = process_write(read_ret);
     if (!write_ret)
     {
         close_conn();
     }
+	//std::cout << "写出到客户端 " << m_sockfd  << " epoll_list " << m_epollfd << endl;
     modfd(m_epollfd, m_sockfd, EPOLLOUT, m_TRIGMode);
 	//cout << "===============end process()======================= " << endl;
 }

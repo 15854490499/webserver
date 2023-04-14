@@ -1,13 +1,16 @@
 #include "scheduler.h"
-#include "unistd.h"
+#include <sys/unistd.h>
+#include <sys/syscall.h>
 
+// 当前线程的调度器，同一个调度器下的所有线程共享同一个实例
 static thread_local Scheduler *t_scheduler = nullptr;
+// 当前线程的调度协程，每个线程都独有一份
 static thread_local Fiber *t_scheduler_fiber = nullptr;
 
-Scheduler::Scheduler(size_t threads, const std::string &name) {
-	assert(threads > 0);
-	m_name = name;
+Scheduler::Scheduler(size_t threads) {
+	LOG_ASSERT(threads > 0, "threads number assertion");
 	m_threadCount = threads;
+	m_rootThread = -1;
 }
 
 Scheduler *Scheduler::GetThis() {
@@ -24,88 +27,32 @@ void Scheduler::setThis() {
 }
 
 Scheduler::~Scheduler() {
-	assert(m_stopping);
 	if(GetThis() == this) {
 		t_scheduler = nullptr;
 	}
 }
 
-void Scheduler::start() {
-	m_locker.lock();
-	if(m_stopping) {
-		std::cout << "Scheduler is stopping" << endl;
-		return;
-	}
-	assert(m_threads.empty());
-	m_threads.resize(m_threadCount);
-	for(size_t i = 0; i < m_threadCount; i++) {
-		m_threads[i].reset(new Thread(std::bind(&Scheduler::run, this), m_name + "_" + std::to_string(i)));
-		m_threadIds.push_back(m_threads[i]->getId());
-	}
-}
-
-bool Scheduler::stopping() {
-	locker.lock();
-	return m_stopping && m_tasks.empty() && m_activeThreadCount == 0;
-}
-
 void Scheduler::tickle() {
-	std::cout << "tickle" << endl;
+	LOG_INFO("tickle");
 }
-
 void Scheduler::idle() {
-	std::cout << "idle" << endl;
-	const uint64_t MAX_EVENTS=256;
-	epool_event *event = new epoll_event[MAX_EVENTS]();
-	std::shared_ptr<epoll_event> shared_evets(events, [](epoll_event *ptr) {
-		delete[] ptr;	
-	});
-	while(true) {
-		if(stopping()) {
-			break;
-		}
-		static const int MAX_TIMEOUT = 5000;
-		int rt = epoll_wait()
-	}
-
-}
-
-void Scheduler::stop() {
-	std::cout << "stop" << endl;;
-	if(stopping()) {
-		return;
-	}
-	m_stopping = true;
-	assert(GetThis != this);
-	for(size_t i = 0; i < m_threadCount; i++) {
-		tickle();
-	}
-	if(m_rootFiber) {
-		tickle();
-	}
-	std::vector<Thread::ptr> thrs;
-    {
-        m_locker.lock();
-        thrs.swap(m_threads);
-    }
-    for (auto &i : thrs) {
-        i->join();
-    }
+    LOG_DEBUG("idle");
+   	return;
 }
 
 void Scheduler::run() {
-	std::cout << "run" << endl;
 	setThis();
-	if(GetThreadId() != m_rootThread) {
+	if(syscall(__NR_gettid) != m_rootThread) {
 		t_scheduler_fiber = Fiber::GetThis().get();
 	}
 	Fiber::ptr idle_fiber(new Fiber(std::bind(&Scheduler::idle, this)));
+	Fiber::ptr cb_fiber;
 	SchedulerTask task;
-	 while (true) {
+	while (true) {
         task.reset();
         bool tickle_me = false; // 是否tickle其他线程进行任务调度
         {
-            m_locker.lock(m_mutex);
+            m_locker.lock();
             auto it = m_tasks.begin();
             // 遍历所有调度任务
             while (it != m_tasks.end()) {
@@ -117,10 +64,10 @@ void Scheduler::run() {
                 }
 
                 // 找到一个未指定线程，或是指定了当前线程的任务
-                assert(it->fiber);
+                LOG_ASSERT(it->fiber || it->cb, "it->fiber || it->cb task assertion");
                 if (it->fiber) {
                     // 任务队列时的协程一定是READY状态，谁会把RUNNING或TERM状态的协程加入调度呢？
-                    assert(it->fiber->getState() == Fiber::READY);
+                    LOG_ASSERT(it->fiber->getState() == Fiber::READY, "it->fiber->getState() == Fiber::READY task assertion");
                 }
                 // 当前调度线程找到一个任务，准备开始调度，将其从任务队列中剔除，活动线程数加1
                 task = *it;
@@ -128,6 +75,7 @@ void Scheduler::run() {
                 ++m_activeThreadCount;
                 break;
             }
+			m_locker.unlock();
             // 当前线程拿完一个任务后，发现任务队列还有剩余，那么tickle一下其他线程
             tickle_me |= (it != m_tasks.end());
         }
@@ -138,21 +86,31 @@ void Scheduler::run() {
 
         if (task.fiber) {
             // resume协程，resume返回时，协程要么执行完了，要么半路yield了，总之这个任务就算完成了，活跃线程数减一
-            task.fiber->resume();
+            task.fiber->swapIn();
             --m_activeThreadCount;
             task.reset();
-        } else {
+        } else if (task.cb) {
+            if (cb_fiber) {
+                cb_fiber->reset(task.cb);
+            } else {
+                cb_fiber.reset(new Fiber(task.cb));
+            }
+            task.reset();
+            cb_fiber->swapIn();
+            --m_activeThreadCount;
+            cb_fiber.reset(); 
+	   	} else {
             // 进到这个分支情况一定是任务队列空了，调度idle协程即可
             if (idle_fiber->getState() == Fiber::TERM) {
                 // 如果调度器没有调度任务，那么idle协程会不停地resume/yield，不会结束，如果idle协程结束了，那一定是调度器停止了
-				std::cout << "idle fiber term";
+				LOG_INFO("idle fiber term");
                 break;
             }
             ++m_idleThreadCount;
-            idle_fiber->resume();
+            idle_fiber->swapIn();
             --m_idleThreadCount;
         }
     }
-    std::cout << "Scheduler::run() exit";
+    LOG_INFO("Scheduler::run() exit");
 }
 

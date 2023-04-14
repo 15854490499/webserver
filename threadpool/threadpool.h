@@ -1,20 +1,17 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
-#include <list>
 #include <cstdio>
 #include <exception>
 #include <pthread.h>
-#include <unistd.h>
 #include <sys/unistd.h>
 #include <sys/syscall.h>
-#include "../lock/locker.h"
-#include "../fiber/fiber.h"
 #include "../http/http_conn.h"
 #include "../CGImysql/sql_connection_pool.h"
+#include "../scheduler/scheduler.h"
 
 template <typename T>
-class threadpool
+class threadpool : public Scheduler
 {
 public:
     /*thread_number是线程池中线程的数量，max_requests是请求队列中最多允许的、等待处理的请求的数量*/
@@ -23,27 +20,29 @@ public:
 	//向请求队列中插入任务请求
     bool append(T *request, int state);
     bool append_p(T *request);
-
 private:
     /*工作线程运行的函数，它不断从工作队列中取出任务并执行之*/
     static void *worker(void *arg);
-    void run();
-	void idle();
+	void handleClient(T*);
 private:
     int m_thread_number;        //线程池中的线程数
     int m_max_requests;         //请求队列中允许的最大请求数
     pthread_t *m_threads;       //描述线程池的数组，其大小为m_thread_number
-    std::list<T *> m_workqueue; //请求队列
-    locker m_queuelocker;       //保护请求队列的互斥锁
-    sem m_queuestat;            //是否有任务需要处理
     connection_pool *m_connPool;  //数据库
     int m_actor_model;          //模型切换
 	int m_epfd = 0;
 	int m_pipe[2];
+protected:
+	void idle() override;
+	void tickle() override;
 };
 template <typename T>
-threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) : m_actor_model(actor_model),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL),m_connPool(connPool)
+threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) : Scheduler(thread_number)
 {
+	m_actor_model = actor_model;
+	m_thread_number = thread_number;
+	m_max_requests = max_requests;
+	m_connPool = connPool;
     if (thread_number <= 0 || max_requests <= 0)
         throw std::exception();
     m_threads = new pthread_t[m_thread_number];
@@ -51,6 +50,7 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
         throw std::exception();
 	//创建epoll
 	m_epfd = epoll_create(5000);
+	LOG_INFO("threadpoll创建%d", m_epfd);
 	int rt = pipe(m_pipe);
 	assert(!rt);
 	//关注可读事件
@@ -64,8 +64,9 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
 	//监听内核事件
 	rt = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_pipe[0], &event);
 	assert(!rt);
-	//创建线程
-    for (int i = 0; i < thread_number; ++i)
+
+	//创建线程 
+	for (int i = 0; i < thread_number; ++i)
     {
         if (pthread_create(m_threads + i, NULL, worker, this) != 0)
         {
@@ -78,6 +79,7 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
             throw std::exception();
         }
     }
+
 }
 template <typename T>
 threadpool<T>::~threadpool()
@@ -90,34 +92,20 @@ threadpool<T>::~threadpool()
 template <typename T>
 bool threadpool<T>::append(T *request, int state)
 {
-    m_queuelocker.lock();
-    if (m_workqueue.size() >= m_max_requests)
-    {
-        m_queuelocker.unlock();
-        return false;
-    }
     request->m_state = state;
-    m_workqueue.push_back(request);
-    m_queuelocker.unlock();
-	write(m_pipe[1], &request, sizeof(request));
-    //m_queuestat.post();
+	/*write(m_pipe[1], &request, sizeof(request));*/
+	schedule(bind(&threadpool::handleClient, this, request));
     return true;
 }
 template <typename T>
 bool threadpool<T>::append_p(T *request)
 {
-    m_queuelocker.lock();
-    if (m_workqueue.size() >= m_max_requests)
-    {
-        m_queuelocker.unlock();
-        return false;
-    }
-    m_workqueue.push_back(request);
-    m_queuelocker.unlock();
-	write(m_pipe[1], &request, sizeof(request));
+   	//write(m_pipe[1], &request, sizeof(request));
+	schedule(bind(&threadpool::handleClient, this, request));
     //m_queuestat.post();
     return true;
 }
+
 template <typename T>
 void *threadpool<T>::worker(void *arg)
 {
@@ -125,6 +113,16 @@ void *threadpool<T>::worker(void *arg)
     pool->run();
     return pool;
 }
+
+template <typename T>
+void threadpool<T>::tickle() {
+    if(!hasIdleThreads()) {
+        return;
+    }
+    int rt = write(m_pipe[1], "T", 1);
+    LOG_ASSERT(rt == 1, "tickle assertion");
+}
+
 template <typename T>
 void threadpool<T>::idle() {
 	const uint64_t MAX_EVENTS = 256;
@@ -133,33 +131,24 @@ void threadpool<T>::idle() {
         delete[] ptr;
     });
 	while(true) {
-		//std::cout  << syscall(__NR_gettid) << "idle" << endl;
-		static const int MAX_TIMEOUT = 5000;
+		//std::cout << syscall(__NR_gettid) << "idle" << endl;
+		//static const int MAX_TIMEOUT = 5000;
 		int rt = epoll_wait(m_epfd, events, MAX_EVENTS, -1/*, MAX_TIMEOUT*/);
 		if(rt < 0) {
 			if(errno == EINTR) {
 				continue;
 			}
-			std::cout << "epoll err " << m_epfd << endl;
+			LOG_ERROR("epoll err");
 			break;
 		}
-		int flag = 0;
+		bool flag = false;
 		for(int i = 0; i < rt; i++) {
 			epoll_event &event = events[i];
-			//std::cout << "协程收到来自 " << event.data.fd << "的信号" << endl; 
 			if(event.data.fd == m_pipe[0]) {
-				flag = 1;
-				T* request;
-				read(m_pipe[0], &request, sizeof(request));
-				m_queuelocker.lock();
-    			if (m_workqueue.size() >= m_max_requests)
-    			{
-        			m_queuelocker.unlock();
-        			return;
-    			}
-    			m_workqueue.push_back(request);
-    			m_queuelocker.unlock();
-				break;
+				flag = true;
+				uint8_t dummy[256];
+				while(read(m_pipe[0], dummy, sizeof(dummy)) > 0);
+				continue;
 			}
 		}
 		if(flag)
@@ -172,30 +161,8 @@ void threadpool<T>::idle() {
 	}
 }
 template <typename T>
-void threadpool<T>::run()
-{
-	Fiber::GetThis();
-	std::function<void()> f = bind(&threadpool<T>::idle, this);
-	Fiber::ptr idle_fiber(new Fiber(f));
-    while (true)
-    {
-        //m_queuestat.wait();
-        m_queuelocker.lock();
-        if (m_workqueue.empty())
-        {
-			//std::cout << syscall(__NR_gettid) << "队列为空，进入swapIn" << endl;
-            m_queuelocker.unlock();
-			idle_fiber->swapIn();
-			//idle_fiber->reset(f);
-            continue;
-        }
-		//std::cout << syscall(__NR_gettid) << "开始处理数据" << endl;
-        T *request = m_workqueue.front();
-        m_workqueue.pop_front();
-        m_queuelocker.unlock();
-        if (!request)
-            continue;
-        if (1 == m_actor_model)
+void threadpool<T>::handleClient(T* request) {
+		if (1 == m_actor_model)
         {
             if (0 == request->m_state)
             {
@@ -203,12 +170,7 @@ void threadpool<T>::run()
                 {
                     request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
-					/*Fiber::GetThis();
-					std::function<void()> f = bind(&http_conn::process, request);
-					Fiber::ptr fiber(new Fiber(f));
-					fiber->swapIn();
-					fiber->reset(f);*/
-                    request->process();
+					request->process();
                 }
                 else
                 {
@@ -232,13 +194,7 @@ void threadpool<T>::run()
         else
         {
             connectionRAII mysqlcon(&request->mysql, m_connPool);
-			/*Fiber::GetThis();
-			std::function<void()> f = bind(&http_conn::process, request);
-			Fiber::ptr fiber(new Fiber(f));
-			fiber->swapIn();
-			fiber->reset(f);*/
             request->process();
         }
-    }
 }
 #endif
