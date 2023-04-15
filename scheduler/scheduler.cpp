@@ -99,11 +99,11 @@ void Scheduler::run() {
             cb_fiber->swapIn();
             --m_activeThreadCount;
             cb_fiber.reset(); 
-	   	} else {
+		} else {
             // 进到这个分支情况一定是任务队列空了，调度idle协程即可
             if (idle_fiber->getState() == Fiber::TERM) {
                 // 如果调度器没有调度任务，那么idle协程会不停地resume/yield，不会结束，如果idle协程结束了，那一定是调度器停止了
-				LOG_INFO("idle fiber term");
+                LOG_INFO("idle fiber term");
                 break;
             }
             ++m_idleThreadCount;
