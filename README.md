@@ -63,7 +63,7 @@ Linux下C++轻量级Web服务器
 * 启动server
 
     ```C++
-    ./server
+    ./bin/server
     ```
 
 * 浏览器端
