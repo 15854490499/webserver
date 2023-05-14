@@ -4,6 +4,9 @@
 #include <exception>
 #include <pthread.h>
 #include <semaphore.h>
+#include <time.h>
+#include <errno.h>
+#include "../log/noncopyable.h"
 
 class sem
 {
@@ -68,10 +71,10 @@ public:
 private:
     pthread_mutex_t m_mutex;
 };
-class cond
+class cond : noncopyable
 {
 public:
-    cond()
+    explicit cond(locker& lock_) : m_locker(lock_)
     {
         if (pthread_cond_init(&m_cond, NULL) != 0)
         {
@@ -83,21 +86,23 @@ public:
     {
         pthread_cond_destroy(&m_cond);
     }
-    bool wait(pthread_mutex_t *m_mutex)
+    bool wait(/*pthread_mutex_t *m_mutex*/)
     {
         int ret = 0;
         //pthread_mutex_lock(&m_mutex);
-        ret = pthread_cond_wait(&m_cond, m_mutex);
+        ret = pthread_cond_wait(&m_cond, m_locker.get());
         //pthread_mutex_unlock(&m_mutex);
         return ret == 0;
     }
-    bool timewait(pthread_mutex_t *m_mutex, struct timespec t)
+    bool timewait(/*pthread_mutex_t *m_mutex,*/ int seconds)
     {
-        int ret = 0;
+        struct timespec abstime;
+		clock_gettime(CLOCK_REALTIME, &abstime);
+		abstime.tv_sec += static_cast<time_t>(seconds);
         //pthread_mutex_lock(&m_mutex);
-        ret = pthread_cond_timedwait(&m_cond, m_mutex, &t);
+        int ret = pthread_cond_timedwait(&m_cond, m_locker.get(), &abstime);
         //pthread_mutex_unlock(&m_mutex);
-        return ret == 0;
+        return ret == ETIMEDOUT;
     }
     bool signal()
     {
@@ -107,9 +112,8 @@ public:
     {
         return pthread_cond_broadcast(&m_cond) == 0;
     }
-
 private:
-    //static pthread_mutex_t m_mutex;
+    locker& m_locker;
     pthread_cond_t m_cond;
 };
 #endif

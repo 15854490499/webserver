@@ -8,7 +8,7 @@
 #include <functional>
 #include <atomic>
 #include "../fiber/fiber.h"
-#include "../log/log.h"
+#include "../log/macro.h"
 #include "../lock/locker.h"
 
 class Scheduler {

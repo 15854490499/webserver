@@ -8,7 +8,7 @@ static thread_local Scheduler *t_scheduler = nullptr;
 static thread_local Fiber *t_scheduler_fiber = nullptr;
 
 Scheduler::Scheduler(size_t threads) {
-	LOG_ASSERT(threads > 0, "threads number assertion");
+	LOG_ASSERT2(threads > 0, "threads number assertion");
 	m_threadCount = threads;
 	m_rootThread = -1;
 }
@@ -33,10 +33,10 @@ Scheduler::~Scheduler() {
 }
 
 void Scheduler::tickle() {
-	LOG_INFO("tickle");
+	LOG_INFO << "tickle\n";
 }
 void Scheduler::idle() {
-    LOG_DEBUG("idle");
+    LOG_INFO <<"idle\n";
    	return;
 }
 
@@ -64,10 +64,10 @@ void Scheduler::run() {
                 }
 
                 // 找到一个未指定线程，或是指定了当前线程的任务
-                LOG_ASSERT(it->fiber || it->cb, "it->fiber || it->cb task assertion");
+                LOG_ASSERT2(it->fiber || it->cb, "it->fiber || it->cb task assertion");
                 if (it->fiber) {
                     // 任务队列时的协程一定是READY状态，谁会把RUNNING或TERM状态的协程加入调度呢？
-                    LOG_ASSERT(it->fiber->getState() == Fiber::READY, "it->fiber->getState() == Fiber::READY task assertion");
+                    LOG_ASSERT2(it->fiber->getState() == Fiber::READY, "it->fiber->getState() == Fiber::READY task assertion");
                 }
                 // 当前调度线程找到一个任务，准备开始调度，将其从任务队列中剔除，活动线程数加1
                 task = *it;
@@ -103,7 +103,7 @@ void Scheduler::run() {
             // 进到这个分支情况一定是任务队列空了，调度idle协程即可
             if (idle_fiber->getState() == Fiber::TERM) {
                 // 如果调度器没有调度任务，那么idle协程会不停地resume/yield，不会结束，如果idle协程结束了，那一定是调度器停止了
-                LOG_INFO("idle fiber term");
+                LOG_INFO << "idle fiber term\n";
                 break;
             }
             ++m_idleThreadCount;
@@ -111,6 +111,6 @@ void Scheduler::run() {
             --m_idleThreadCount;
         }
     }
-    LOG_INFO("Scheduler::run() exit");
+    LOG_INFO << "Scheduler::run() exit\n";
 }
 

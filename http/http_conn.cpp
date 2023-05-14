@@ -26,7 +26,7 @@ void http_conn::initmysql_result(connection_pool *connPool)
     //在user表中检索username，passwd数据，浏览器端输入
     if (mysql_query(mysql, "SELECT username,passwd FROM user"))
     {
-        LOG_ERROR("SELECT error:%s\n", mysql_error(mysql));
+        LOG_ERROR << "SELECT error: " << mysql_error(mysql);
     }
 
     //从表中检索完整的结果集
@@ -93,7 +93,7 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode)
 
     if(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event)!=0)
 	{
-		LOG_ERROR("modify epoll err %d %s", errno, strerror(errno));
+		LOG_ERROR << "modify epoll err" << errno << strerror(errno);
 	}
 }
 
@@ -343,7 +343,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text)
     }
     else
     {
-        LOG_INFO("oop!unknow header: %s", text);
+        LOG_INFO << "oop!unknow header:" << text;
     }
 	//cout << "************************end parse_headers**************************" << endl;
     return NO_REQUEST;
@@ -375,7 +375,7 @@ http_conn::HTTP_CODE http_conn::process_read()
     {
         text = get_line();
         m_start_line = m_checked_idx;
-        LOG_INFO("%s", text);
+        LOG_INFO << text;
         switch (m_check_state)
         {
         case CHECK_STATE_REQUESTLINE:
@@ -683,7 +683,7 @@ bool http_conn::add_response(const char *format, ...)
     m_write_idx += len;
     va_end(arg_list);
 
-    LOG_INFO("request:%s", m_write_buf);
+    LOG_INFO << "request:" << m_write_buf;
 
     return true;
 }

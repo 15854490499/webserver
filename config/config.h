@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "webserver.h"
+#include "../main/webserver.h"
 
 using namespace std;
 

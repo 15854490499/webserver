@@ -50,7 +50,7 @@ threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int threa
         throw std::exception();
 	//创建epoll
 	m_epfd = epoll_create(5000);
-	LOG_INFO("threadpoll创建%d", m_epfd);
+	LOG_INFO << "threadpoll创建" << m_epfd;
 	int rt = pipe(m_pipe);
 	assert(!rt);
 	//关注可读事件
@@ -120,7 +120,7 @@ void threadpool<T>::tickle() {
         return;
     }
     int rt = write(m_pipe[1], "T", 1);
-    LOG_ASSERT(rt == 1, "tickle assertion");
+    LOG_ASSERT2(rt == 1, "tickle assertion");
 }
 
 template <typename T>
@@ -138,7 +138,7 @@ void threadpool<T>::idle() {
 			if(errno == EINTR) {
 				continue;
 			}
-			LOG_ERROR("epoll err");
+			LOG_ERROR << "epoll err";
 			break;
 		}
 		bool flag = false;

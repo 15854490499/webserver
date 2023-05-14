@@ -11,9 +11,9 @@
 #include <stdlib.h>
 #include <cassert>
 #include <sys/epoll.h>
-#include "./log/log.h"
-#include "./threadpool/threadpool.h"
-#include "./http/http_conn.h"
+#include "../log/log.h"
+#include "../threadpool/threadpool.h"
+#include "../http/http_conn.h"
 
 const int MAX_FD = 65536;           //最大文件描述符
 const int MAX_EVENT_NUMBER = 10000; //最大事件数
@@ -31,7 +31,7 @@ public:
 
     void thread_pool();
     void sql_pool();
-    void log_write();
+    //void log_write();
     void trig_mode();
     void eventListen();
     void eventLoop();

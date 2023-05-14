@@ -1,5 +1,5 @@
 #include "fiber.h"
-#include "../webserver.h"
+#include "../main/webserver.h"
 #include <string.h>
 #include <atomic>
 #include <exception>
@@ -37,7 +37,7 @@ Fiber::Fiber() {
 	m_state = EXEC;
 	SetThis(this);
 	if(getcontext(&m_ctx)) {
-		LOG_ERROR("getcontext error %s", strerror(errno));
+		LOG_ERROR << "getcontext error " << strerror(errno);
 	}
 	++gFiberCnt;
 	//std::cout << "Fiber::Fiber main start id =, total =" << m_id << gFiberCnt.load() << endl;
@@ -50,7 +50,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stacksize)
 		m_stacksize = stacksize ? stacksize : getStackSize();
 		m_stack = StackAllocator::Alloc(m_stacksize);
 		if(getcontext(&m_ctx)) {
-			LOG_ERROR("getcontext error %d %s", errno, strerror(errno));
+			LOG_ERROR << "getcontext error " << errno << " " << strerror(errno);
 			exit(0);
 		}
 		m_ctx.uc_link = nullptr;
@@ -63,7 +63,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stacksize)
 Fiber::~Fiber() {
 	--gFiberCnt;
 	if(m_stack) {
-		LOG_ASSERT(m_state == TERM, "Fiber State assertion");
+		LOG_ASSERT2(m_state == TERM, "Fiber State assertion");
 		StackAllocator::Dealloc(m_stack, m_stacksize);
 	} else {
 		assert(!m_cb);
@@ -77,11 +77,11 @@ Fiber::~Fiber() {
 }
 
 void Fiber::reset(std::function<void()> cb) {
-	LOG_ASSERT(m_stack, "Fiber Stack assertion")
-	LOG_ASSERT(m_state == TERM, "Fiber State assertion");
+	LOG_ASSERT2(m_stack, "Fiber Stack assertion")
+	LOG_ASSERT2(m_state == TERM, "Fiber State assertion");
 	m_cb = cb;
 	if(getcontext(&m_ctx)) {
-		LOG_ERROR("getcontext error %d %s", errno, strerror(errno));
+		LOG_ERROR << "getcontext error " << errno << " " << strerror(errno);
 		exit(0);
 	}
 	m_ctx.uc_link = nullptr;
@@ -94,23 +94,23 @@ void Fiber::reset(std::function<void()> cb) {
 //切换到当前协程执行
 void Fiber::swapIn() {
     SetThis(this);
-    LOG_ASSERT(m_state != EXEC, "Fiber State assertion");
+    LOG_ASSERT2(m_state != EXEC, "Fiber State assertion");
     m_state = EXEC;
     if(swapcontext(&t_thread_fiber->m_ctx, &m_ctx)) {
-		LOG_ERROR("swapcontext error %d %s", errno, strerror(errno));
+		LOG_ERROR << "swapcontext error " << errno << " " << strerror(errno);
 		exit(0);    
 	}
 }
 
 //切换到后台执行
 void Fiber::swapOut() {
-    LOG_ASSERT(m_state == EXEC || m_state == TERM, "Fiber State assertion");
+    LOG_ASSERT2(m_state == EXEC || m_state == TERM, "Fiber State assertion");
     SetThis(t_thread_fiber.get());
 	if(m_state != TERM) {
 		m_state = READY;
 	}
     if(swapcontext(&m_ctx, &t_thread_fiber->m_ctx)) {
-		LOG_ERROR("swapcontext error %d %s", errno, strerror(errno));
+		LOG_ERROR << "swapcontext error " << errno << " " << strerror(errno);
 		exit(0);    
     }
 }
@@ -130,7 +130,7 @@ Fiber::ptr Fiber::GetThis() {
         return t_fiber->shared_from_this();
     }
     Fiber::ptr main_fiber(new Fiber);
-    LOG_ASSERT(t_fiber == main_fiber.get(), "running Fiber assertion");
+    LOG_ASSERT2(t_fiber == main_fiber.get(), "running Fiber assertion");
     t_thread_fiber = main_fiber;
     return t_fiber->shared_from_this();
 }
@@ -143,7 +143,7 @@ uint64_t Fiber::TotalFibers() {
 void Fiber::FiberEntry()
 {
     Fiber::ptr curr = GetThis();
-    LOG_ASSERT(curr != nullptr, "running Fiber assertion");
+    LOG_ASSERT2(curr != nullptr, "running Fiber assertion");
     curr->m_cb();
     curr->m_cb = nullptr;
     curr->m_state = TERM;
@@ -151,6 +151,6 @@ void Fiber::FiberEntry()
     Fiber *ptr = curr.get();
     curr.reset();
     ptr->swapOut();
-    LOG_ASSERT(false, "never reach here");
+    LOG_ASSERT2(false, "never reach here");
 }
 

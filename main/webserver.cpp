@@ -72,7 +72,7 @@ void WebServer::trig_mode()
     }
 }
 
-void WebServer::log_write()
+/*void WebServer::log_write()
 {
     if (0 == m_close_log)
     {
@@ -82,7 +82,7 @@ void WebServer::log_write()
         else
             Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 0);
     }
-}
+}*/
 
 void WebServer::sql_pool()
 {
@@ -137,7 +137,7 @@ void WebServer::eventListen()
     //epoll创建内核事件表
     epoll_event events[MAX_EVENT_NUMBER];
     m_epollfd = epoll_create(5);
-	LOG_INFO("webserver创建%d", m_epollfd);
+	LOG_INFO << "webserver创建" << m_epollfd;
     assert(m_epollfd != -1);
 
     utils.addfd(m_epollfd, m_listenfd, false, m_LISTENTrigmode);
@@ -184,7 +184,7 @@ void WebServer::adjust_timer(util_timer *timer)
     timer->expire = cur + 3 * TIMESLOT;
     utils.m_timer_heap.adjust_timer(timer);
 
-    LOG_INFO("%s", "adjust timer once");
+    LOG_INFO << "adjust timer once";
 }
 
 void WebServer::deal_timer(util_timer *timer, int sockfd)
@@ -195,7 +195,7 @@ void WebServer::deal_timer(util_timer *timer, int sockfd)
         utils.m_timer_heap.del_timer(timer);
     }
 
-    LOG_INFO("close fd %d", users_timer[sockfd].sockfd);
+    LOG_INFO << "close fd " << users_timer[sockfd].sockfd;
 }
 
 bool WebServer::dealclinetdata()
@@ -208,13 +208,13 @@ bool WebServer::dealclinetdata()
 		//std::cout << "处理新到客户连接 " << connfd << endl;
         if (connfd < 0)
         {
-            LOG_ERROR("%s:errno is:%d", "accept error", errno);
+            LOG_ERROR << "accept error" << ":errno is: " << errno;
             return false;
         }
         if (http_conn::m_user_count >= MAX_FD)
         {
             utils.show_error(connfd, "Internal server busy");
-            LOG_ERROR("%s", "Internal server busy");
+            LOG_ERROR << "Internal server busy";
             return false;
         }
         timer(connfd, client_address);
@@ -227,13 +227,13 @@ bool WebServer::dealclinetdata()
             int connfd = accept(m_listenfd, (struct sockaddr *)&client_address, &client_addrlength);
             if (connfd < 0)
             {
-                LOG_ERROR("%s:errno is:%d", "accept error", errno);
+                LOG_ERROR << "accept error" <<":errno is: " << errno;
                 break;
             }
             if (http_conn::m_user_count >= MAX_FD)
             {
                 utils.show_error(connfd, "Internal server busy");
-                LOG_ERROR("%s", "Internal server busy");
+                LOG_ERROR << "Internal server busy";
                 break;
             }
             timer(connfd, client_address);
@@ -313,7 +313,7 @@ void WebServer::dealwithread(int sockfd)
         //proactor
         if (users[sockfd].read_once())
         {
-            LOG_INFO("deal with the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
+            LOG_INFO << "deal with the client " << inet_ntoa(users[sockfd].get_address()->sin_addr);
 
             //若监测到读事件，将该事件放入请求队列
             m_pool->append_p(users + sockfd);
@@ -363,7 +363,7 @@ void WebServer::dealwithwrite(int sockfd)
         if (users[sockfd].write())
         {
 			//std::cout << "向" << sockfd << "发送数据成功" << endl;
-            LOG_INFO("send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
+            LOG_INFO << "send data to the client " << " " <<inet_ntoa(users[sockfd].get_address()->sin_addr);
 
             if (timer)
             {
@@ -379,8 +379,8 @@ void WebServer::dealwithwrite(int sockfd)
 
 void WebServer::eventLoop()
 {
-	LOG_INFO("===================================webserver eventloop======================");
-    bool timeout = false;
+	LOG_INFO << "===================================webserver eventloop======================";
+	bool timeout = false;
     bool stop_server = false;
 
     while (!stop_server)
@@ -388,7 +388,7 @@ void WebServer::eventLoop()
         int number = epoll_wait(m_epollfd, events, MAX_EVENT_NUMBER, -1);
         if (number < 0 && errno != EINTR)
         {
-            LOG_ERROR("%s", "epoll failure");
+            LOG_ERROR << "epoll failure";
             break;
         }
 		
@@ -416,7 +416,7 @@ void WebServer::eventLoop()
 				//std::cout << "webserver收到 信号" << sockfd << endl;
                 bool flag = dealwithsignal(timeout, stop_server);
                 if (false == flag)
-                    LOG_ERROR("%s", "dealclientdata failure");
+                    LOG_ERROR << "dealclientdata failure";
             }
             //处理客户连接上接收到的数据
             else if (events[i].events & EPOLLIN)
@@ -434,10 +434,10 @@ void WebServer::eventLoop()
         {
             utils.timer_handler();
 
-            LOG_INFO("%s", "timer tick");
+            LOG_INFO << "timer tick";
 
             timeout = false;
         }
     }
-	LOG_INFO("===============================webserver end eventloop======================");
+	LOG_INFO << "===============================webserver end eventloop======================";
 }

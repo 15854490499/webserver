@@ -6,6 +6,7 @@ Linux下C++轻量级Web服务器
 
 * [原作地址](https://github.com/qinguoyi/TinyWebServer)
 * [参考项目：sylar高性能服务器框架](https://github.com/sylar-yin)
+* [参考项目：linyacoolWebServer](https://github.com/linyacool/WebServer)
 * 参考书籍
 	* 《linux高性能服务器编程》
 	* 《C++ Primer Plus  第6版》
@@ -14,12 +15,13 @@ Linux下C++轻量级Web服务器
 ----
 * 将定时器由基于链表更改为基于堆
 * 加入协程模块和协程调度模块
+* 加入双缓冲异步日志
 
 快速运行
 ------------
 * 服务器测试环境
-	* Ubuntu版本16.04
-	* MySQL版本5.7.29
+	* Ubuntu版本20.04
+	* MySQL版本5.7.39
 * 浏览器测试环境
 	* Windows、Linux均可
 	* Chrome
@@ -55,7 +57,7 @@ Linux下C++轻量级Web服务器
 * build
 
     ```C++
-    sh ./build.sh
+    sudo make
     ```
 
 * 启动server

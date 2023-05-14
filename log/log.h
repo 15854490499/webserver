@@ -1,72 +1,44 @@
-#ifndef LOG_H
-#define LOG_H
-
-#include <stdio.h>
-#include <iostream>
-#include <string>
-#include <stdarg.h>
+#pragma once
 #include <pthread.h>
-#include <assert.h>
-#include "block_queue.h"
+#include <stdio.h>
+#include <string.h>
+#include <string>
+#include "LogStream.h"
 
-using namespace std;
+class AsyncLogging;
 
-class Log
-{
+class Logger {
 public:
-    //C++11以后,使用局部变量懒汉不用加锁
-    static Log *get_instance()
-    {
-        static Log instance;
-        return &instance;
-    }
-
-    static void *flush_log_thread(void *args)
-    {
-        Log::get_instance()->async_write_log();
-    }
-    //可选择的参数有日志文件、日志缓冲区大小、最大行数以及最长日志条队列
-    bool init(const char *file_name, int close_log, int log_buf_size = 8192, int split_lines = 5000000, int max_queue_size = 0);
-
-    void write_log(int level, const char *format, ...);
-
-    void flush(void);
-	
-	int isClose();
+	enum Level {
+		UNKNOWN = 0,
+		DEBUG = 1,
+		INFO = 2,
+		WARN = 3,
+		ERROR = 4,
+		FATAL = 5
+	};
+	Logger(const char* fileName, int line, int level);
+	~Logger();
+	LogStream &stream() { return impl_.stream_; }
+	static void setLogFileName(std::string fileName) { logFileName_ = fileName; }
+	static std::string getLogFileName() { return logFileName_; }
 private:
-    Log();
-    virtual ~Log();
-    void *async_write_log()
-    {
-        string single_log;
-        //从阻塞队列中取出一个日志string，写入文件
-        while (m_log_queue->pop(single_log))
-        {
-            m_mutex.lock();
-            fputs(single_log.c_str(), m_fp);
-            m_mutex.unlock();
-        }
-    }
-
-private:
-    char dir_name[128]; //路径名
-    char log_name[128]; //log文件名
-    int m_split_lines;  //日志最大行数
-    int m_log_buf_size; //日志缓冲区大小
-    long long m_count;  //日志行数记录
-    int m_today;        //因为按天分类,记录当前时间是那一天
-    FILE *m_fp;         //打开log的文件指针
-    char *m_buf;
-    block_queue<string> *m_log_queue; //阻塞队列
-    bool m_is_async;                  //是否同步标志位
-    locker m_mutex;
-    int m_close_log; //关闭日志
+	class Impl {
+	public:
+		Impl(const char* fileName, int line, int level);
+		void formatTime();
+		LogStream stream_;
+		int line_;
+		int level_;
+		std::string basename_;
+	};
+	Impl impl_;
+	static std::string logFileName_;
 };
-
-#define LOG_DEBUG(format, ...) if(!Log::get_instance()->isClose()) {Log::get_instance()->write_log(0, format, ##__VA_ARGS__); Log::get_instance()->flush();}
-#define LOG_INFO(format, ...) if(!Log::get_instance()->isClose()) {Log::get_instance()->write_log(1, format, ##__VA_ARGS__); Log::get_instance()->flush();}
-#define LOG_WARN(format, ...) if(!Log::get_instance()->isClose()) {Log::get_instance()->write_log(2, format, ##__VA_ARGS__); Log::get_instance()->flush();}
-#define LOG_ERROR(format, ...) if(!Log::get_instance()->isClose()) {Log::get_instance()->write_log(3, format, ##__VA_ARGS__); Log::get_instance()->flush();}
-#define LOG_ASSERT(x, format, ...) \
-	Log::get_instance()->write_log(1, format, ##__VA_ARGS__); Log::get_instance()->flush(); assert(x);
-#endif
+#define LOG(level) Logger(__FILE__, __LINE__, level).stream()
+#define LOG_DEBUG LOG(Logger::DEBUG)
+#define LOG_INFO LOG(Logger::INFO)
+#define LOG_WARN LOG(Logger::WARN)
+#define LOG_ERROR LOG(Logger::ERROR)
+#define LOG_FATAL LOG(Logger::FATAL)
+#define LOG_UNKNOWN LOG(Logger::UNKNOWN)
