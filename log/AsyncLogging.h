@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <deque>
 #include "CountDownLatch.h"
 #include "LogStream.h"
 #include "../lock/locker.h"
@@ -33,6 +34,8 @@ private:
 	static void* worker(void* arg); 
 	typedef FixedBuffer<kLargeBuffer> Buffer;
 	typedef std::vector<std::shared_ptr<Buffer>> BufferVector;
+	typedef std::deque<std::shared_ptr<Buffer>> Stack;
+	typedef std::deque<std::shared_ptr<Buffer>> Queue;
 	typedef std::shared_ptr<Buffer> BufferPtr;
 	const int flushInterval_;
 	bool running_;
@@ -41,7 +44,7 @@ private:
 	locker lock_;
 	cond cond_;
 	BufferPtr currentBuffer_;
-	BufferPtr nextBuffer_;
-	BufferVector buffers_;
+	Queue fullBuffers;
+	Stack emptyBuffers;
 	CountDownLatch latch_;
 };

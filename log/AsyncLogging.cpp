@@ -9,28 +9,42 @@ AsyncLogging::AsyncLogging(const std::string logFileName_, int flushInterval)
 	: flushInterval_(flushInterval),
 	  running_(false),
 	  basename_(logFileName_),
-	  currentBuffer_(new Buffer),
-	  nextBuffer_(new Buffer),
-	  buffers_(),
 	  cond_(lock_),
 	  latch_(1) {
+	emptyBuffers.resize(128);
+	for(int i = 0; i < 128; i++)
+		emptyBuffers[i] = (std::shared_ptr<Buffer>)(new Buffer);
 	assert(logFileName_.size() > 1);
-	currentBuffer_->bzero();
-	nextBuffer_->bzero();
-	buffers_.reserve(16);
 }
 
 void AsyncLogging::append(const char* logline, int len) {
 	lock_.lock();
-	if(currentBuffer_->avail() > len)
+	if(!currentBuffer_) {
+		if(!emptyBuffers.empty()) {
+			currentBuffer_ = std::move(emptyBuffers.front());
+			emptyBuffers.pop_front();
+			currentBuffer_->bzero();
+		}
+		else {
+			lock_.unlock();
+			return;
+		}
+	}
+	if(currentBuffer_->avail() > len) {
 		currentBuffer_->append(logline, len);
+	}
 	else {
-		buffers_.push_back(currentBuffer_);
+		fullBuffers.push_back(currentBuffer_);
 		currentBuffer_.reset();
-		if(nextBuffer_) 
-			currentBuffer_ = std::move(nextBuffer_);
-		else
-			currentBuffer_.reset(new Buffer);
+		if(!emptyBuffers.empty()) {
+			currentBuffer_ = std::move(emptyBuffers.front());
+			emptyBuffers.pop_front();
+			currentBuffer_->bzero();
+		}		
+		else {
+			lock_.unlock();
+			return;
+		}
 		currentBuffer_->append(logline, len);
 		cond_.signal();
 	}
@@ -47,51 +61,31 @@ void AsyncLogging::threadFunc() {
 	assert(running_ == true);
 	latch_.countDown();
 	LogFile output(basename_);
-	BufferPtr newBuffer1(new Buffer);
-	BufferPtr newBuffer2(new Buffer);
-	newBuffer1->bzero();
-	newBuffer2->bzero();
+	BufferPtr bufferToWrite;
 	BufferVector buffersToWrite;
 	buffersToWrite.reserve(16);
 	while(running_) {
-		assert(newBuffer1 && newBuffer1->length() == 0);
-		assert(newBuffer2 && newBuffer2->length() == 0);
 		assert(buffersToWrite.empty());
 		{
 			lock_.lock();
-			if(buffers_.empty()) {
+			if(fullBuffers.empty()) {
 				cond_.timewait(flushInterval_);
+				fullBuffers.push_back(currentBuffer_);
 			}
-			buffers_.push_back(currentBuffer_);
-			currentBuffer_.reset();
-			currentBuffer_ = std::move(newBuffer1);
-			buffersToWrite.swap(buffers_);
-			if(!nextBuffer_) {
-				nextBuffer_ = std::move(newBuffer2);
+			bufferToWrite = std::move(fullBuffers.front());
+			fullBuffers.pop_front();
+			buffersToWrite.push_back(bufferToWrite);
+			if(!emptyBuffers.empty()) {
+				currentBuffer_ = std::move(emptyBuffers.front());
+				emptyBuffers.pop_front();
+				currentBuffer_->bzero();
 			}
 			lock_.unlock();
 		}
-		assert(!buffersToWrite.empty());
-		if(buffersToWrite.size() > 25) {
-			buffersToWrite.erase(buffersToWrite.begin() + 2, buffersToWrite.end());
-		}
 		for(size_t i = 0; i < buffersToWrite.size(); ++i) {
 			output.append(buffersToWrite[i]->data(), buffersToWrite[i]->length());
-		}
-		if(buffersToWrite.size() > 2) {
-			buffersToWrite.resize(2);
-		}
-		if(!newBuffer1) {
-			assert(!buffersToWrite.empty());
-			newBuffer1 = buffersToWrite.back();
-			buffersToWrite.pop_back();
-			newBuffer1->reset();
-		}
-		if(!newBuffer2) {
-			assert(!buffersToWrite.empty());
-			newBuffer2 = buffersToWrite.back();
-			buffersToWrite.pop_back();
-			newBuffer2->reset();
+			buffersToWrite[i]->reset();
+			emptyBuffers.push_front(std::move(buffersToWrite[i]));
 		}
 		buffersToWrite.clear();
 		output.flush();
